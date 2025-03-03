@@ -22,7 +22,7 @@ class Program
 {
     private const string NomicEmbedApiUrl = "http://localhost:11434/api/embeddings";
     private const string ElasticsearchUrl = "https://localhost:9200";
-    private const string IndexName = "semantic_search_ty_product_knn_norm_cosine2";
+    private const string IndexName = "semantic_search_ty_product_knn_norm_snow2_l2"; //semantic_search_ty_product_knn_norm_snow (cosine), semantic_search_ty_product_knn_norm_snow_l2 (knn(l2), "semantic_search_ty_product_knn_norm_snow2" (cosine), "semantic_search_ty_product_knn_norm_snow2_l2" (knn(l2))
     private static readonly string ElasticsearchUser = "elastic";
     private static readonly string ElasticsearchPassword = "M1DW3gREyHfrvdzbvvVU";
 
@@ -30,19 +30,12 @@ class Program
     private static readonly ElasticsearchClient _esClient = CreateElasticClient();
     private static readonly MLContext mlContext = new MLContext();
 
+
     static void Main()
     {
-        // Verileri oku ve Elasticsearch'e kaydet
-        //int id = 0;
-        //var records = ReadCsv("products.csv");
-        //CreateElasticsearchIndex();
-        //foreach (var record in records)
-        //{
-        //    id++;
-        //    float[] embedding = GetEmbedding(record.title).Result;
-        //    SaveToElasticsearch(id, record.title, embedding);
-        //}
-        // Verileri oku ve Elasticsearch'e kaydet
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        Console.InputEncoding = Encoding.GetEncoding("Windows-1254");
+        Console.OutputEncoding = Encoding.GetEncoding("Windows-1254");
 
         // Verileri dbden al ve Elasticsearch'e kaydet
         //int id = 0;
@@ -56,6 +49,7 @@ class Program
         //        var embedingString = $"Ürünün başlığı: {record.ProductName}, Ürünün kategorisi: {record.CategoryName}, Ürünün markası: {record.BrandName}";
         //        var embeddingNormalizedString = PreprocessText($"{record.ProductName} {record.CategoryName}");
         //        float[] embedding = GetEmbedding(embeddingNormalizedString).Result;
+
         //        SaveToElasticsearch(id, embedingString, embeddingNormalizedString, embedding);
         //    }
         //}
@@ -66,10 +60,24 @@ class Program
         Console.WriteLine("Arama yapmak için bir kelime girin:");
         string query = Console.ReadLine();
 
-        //örnek : "pantul"
-        //örnek : "erkek çocuk kot pantolon"
+        //örnek : pantul
+        //örnek : göynek
+        //örnek : küçük pantolon
+        //küçük insan
         //kategori örnek : temıslene
         //kategori örnek : giysi
+        //sıcak havalarda giyilecek giysi
+        //soğuk havalarda giyilecek giysi
+        //yumuşak kumaş
+        //para
+        //para taşımak için eşya
+        //bayan giyim
+        //adam
+        //adamlar için soğukta giyilecek giysi
+        //taşıt
+        //araba oturak örtüsü
+        //elektronik
+
         SearchInElasticsearch(PreprocessText(query));
     }
 
@@ -94,7 +102,7 @@ class Program
     {
         var request = new
         {
-            model = "nomic-embed-text",
+            model = "snowflake-arctic-embed2",
             prompt = text
         };
 
@@ -122,8 +130,8 @@ class Program
                     .Text(x => x.Content)
                     .Text(x => x.NormalizedText)
                     .DenseVector(x => x.Vector, dv => dv
-                        .Dims(768)
-                        .Similarity(Elastic.Clients.Elasticsearch.Mapping.DenseVectorSimilarity.Cosine)
+                        .Dims(1024)
+                        .Similarity(Elastic.Clients.Elasticsearch.Mapping.DenseVectorSimilarity.L2Norm)
                         .Index(true)
                     )
                 )
@@ -163,6 +171,7 @@ class Program
         Console.WriteLine("En Benzer Sonuçlar:");
         foreach (var hit in searchResponse.Hits)
         {
+            
             Console.WriteLine($"Skor : {hit.Score}");
             Console.WriteLine($"Id : {hit.Source.Id}");
             Console.WriteLine($"İçerik : {hit.Source.Content}");
@@ -181,7 +190,7 @@ class Program
         // A pipeline for normalizing text.
         var normTextPipeline = mlContext.Transforms.Text.NormalizeText(
             "NormalizedText", "Text", TextNormalizingEstimator.CaseMode.Lower,
-            keepDiacritics: false,
+            keepDiacritics: true,
             keepPunctuations: false,
             keepNumbers: false);
 
@@ -247,7 +256,7 @@ class Program
         // Remove duplicate words.
         var uniqueWords = words.Distinct();
         // Join the unique words back into a single string.
-        return string.Join(",", uniqueWords);
+        return string.Join(" ", uniqueWords);
     }
     static string PreprocessText(string text)
     {
