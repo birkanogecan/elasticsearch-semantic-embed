@@ -18,18 +18,15 @@ using Elastic.Clients.Elasticsearch.Nodes;
 using Microsoft.ML;
 using Microsoft.ML.Transforms.Text;
 
-class Program
+public class Program
 {
-    private const string NomicEmbedApiUrl = "http://localhost:11434/api/embeddings";
-    private const string ElasticsearchUrl = "https://localhost:9200";
-    private const string IndexName = "semantic_search_ty_product_knn_norm_snow2_l2"; //semantic_search_ty_product_knn_norm_snow (cosine), semantic_search_ty_product_knn_norm_snow_l2 (knn(l2), "semantic_search_ty_product_knn_norm_snow2" (cosine), "semantic_search_ty_product_knn_norm_snow2_l2" (knn(l2))
+    
+    private static string ElasticsearchUrl = "https://localhost:9200";
+    private static string IndexName = "semantic_search_ty_product_knn_norm_snow2_l2"; //semantic_search_ty_product_knn_norm_snow (cosine), semantic_search_ty_product_knn_norm_snow_l2 (knn(l2), "semantic_search_ty_product_knn_norm_snow2" (cosine), "semantic_search_ty_product_knn_norm_snow2_l2" (knn(l2))
     private static readonly string ElasticsearchUser = "elastic";
     private static readonly string ElasticsearchPassword = "M1DW3gREyHfrvdzbvvVU";
 
-    private static readonly HttpClient _httpClient = new HttpClient();
     private static readonly ElasticsearchClient _esClient = CreateElasticClient();
-    private static readonly MLContext mlContext = new MLContext();
-
 
     static void Main()
     {
@@ -47,8 +44,8 @@ class Program
         //    {
         //        id++;
         //        var embedingString = $"Ürünün başlığı: {record.ProductName}, Ürünün kategorisi: {record.CategoryName}, Ürünün markası: {record.BrandName}";
-        //        var embeddingNormalizedString = PreprocessText($"{record.ProductName} {record.CategoryName}");
-        //        float[] embedding = GetEmbedding(embeddingNormalizedString).Result;
+        //        var embeddingNormalizedString = NlpProvider.PreprocessText($"{record.ProductName} {record.CategoryName}");
+        //        float[] embedding = NlpProvider.GetEmbedding(embeddingNormalizedString).Result;
 
         //        SaveToElasticsearch(id, embedingString, embeddingNormalizedString, embedding);
         //    }
@@ -78,7 +75,7 @@ class Program
         //araba oturak örtüsü
         //elektronik
 
-        SearchInElasticsearch(PreprocessText(query));
+        SearchInElasticsearch(query);
     }
 
     static ElasticsearchClient CreateElasticClient()
@@ -91,27 +88,7 @@ class Program
         return new ElasticsearchClient(settings);
     }
 
-    static List<ProductRecord> ReadCsv(string filePath)
-    {
-        using var reader = new StreamReader(filePath);
-        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-        return csv.GetRecords<ProductRecord>().ToList();
-    }
-
-    static async Task<float[]> GetEmbedding(string text)
-    {
-        var request = new
-        {
-            model = "snowflake-arctic-embed2",
-            prompt = text
-        };
-
-        var response = await _httpClient.PostAsJsonAsync(NomicEmbedApiUrl, request);
-        response.EnsureSuccessStatusCode();
-
-        var responseData = await response.Content.ReadFromJsonAsync<NomicResponse>();
-        return responseData.embedding; // İlk embedding'i al
-    }
+    
 
     static void CreateElasticsearchIndex()
     {
@@ -153,9 +130,9 @@ class Program
         _esClient.IndexAsync(document, i => i.Id(id).Index(IndexName));
     }
 
-    static void SearchInElasticsearch(string query)
+    public static void SearchInElasticsearch(string query)
     {
-        float[] queryVector = GetEmbedding(query).Result;
+        float[] queryVector = NlpProvider.GetEmbedding(query);
 
         var searchResponse =  _esClient.SearchAsync<ElasticRecord>(s => s
                 .Index(IndexName)
@@ -180,95 +157,8 @@ class Program
         }
     }
 
-    static string NormalizeText(string text)
-    {
-        var emptySamples = new List<TextData>();
-
-        // Convert sample list to an empty IDataView.
-        var emptyDataView = mlContext.Data.LoadFromEnumerable(emptySamples);
-
-        // A pipeline for normalizing text.
-        var normTextPipeline = mlContext.Transforms.Text.NormalizeText(
-            "NormalizedText", "Text", TextNormalizingEstimator.CaseMode.Lower,
-            keepDiacritics: true,
-            keepPunctuations: false,
-            keepNumbers: false);
-
-        // Fit to data.
-        var normTextTransformer = normTextPipeline.Fit(emptyDataView);
-
-        // Create the prediction engine to get the normalized text from the
-        // input text/string.
-        var predictionEngine = mlContext.Model.CreatePredictionEngine<TextData,
-            TransformedTextData>(normTextTransformer);
-
-        // Call the prediction API.
-        var data = new TextData()
-        {
-            Text = text
-        };
-
-        var prediction = predictionEngine.Predict(data);
-       
-        // Print the normalized text.
-        return prediction.NormalizedText;
-    }
-    static string RemoveStopWords(string text)
-    {
-        var emptySamples = new List<TextData>();
-
-        // Convert sample list to an empty IDataView.
-        var emptyDataView = mlContext.Data.LoadFromEnumerable(emptySamples);
-
-        // A pipeline for removing stop words from input text/string.
-        // The pipeline first tokenizes text into words then removes stop words.
-        // The 'RemoveStopWords' API ignores casing of the text/string e.g. 
-        // 'tHe' and 'the' are considered the same stop words.
-        var textPipeline = mlContext.Transforms.Text.TokenizeIntoWords("Words",
-            "Text")
-            .Append(mlContext.Transforms.Text.RemoveStopWords(
-            "WordsWithoutStopWords", "Words", stopwords:
-            new[] { "fakat", "lakin", "ancak", "acaba", "ama", "aslında", "az", "bazı", "belki", "biri", "birkaç", "birşey", "biz", "bu", "çok", "çünkü", "da", "daha", "de", "defa", "diye", "eğer", "en", "gibi", "hem", "hep", "hepsi", "her", "hiç", "için", "ile", "ise", "kez", "ki", "kim", "mı", "mu", "mü", "nasıl", "ne", "neden", "nerde", "nerede", "nereye", "niçin", "niye", "o", "sanki", "şey", "siz", "şu", "tüm", "ve", "veya", "ya", "yani" }));
-
-        // Fit to data.
-        var textTransformer = textPipeline.Fit(emptyDataView);
-
-        // Create the prediction engine to remove the stop words from the input
-        // text /string.
-        var predictionEngine = mlContext.Model.CreatePredictionEngine<TextData,
-            TransformedTextData>(textTransformer);
-
-        // Call the prediction API to remove stop words.
-        var data = new TextData()
-        {
-            Text = text
-        };
-
-        var prediction = predictionEngine.Predict(data);
-
-        // Print the word vector without stop words.
-       return string.Join(",", prediction.WordsWithoutStopWords);
-    }
-    static string RemoveDuplicateWords(string text)
-    {
-        // Split the text into words.
-        var words = text.Split(',');
-        // Remove duplicate words.
-        var uniqueWords = words.Distinct();
-        // Join the unique words back into a single string.
-        return string.Join(" ", uniqueWords);
-    }
-    static string PreprocessText(string text)
-    {
-        // Normalize the text.
-        var normalizedText = NormalizeText(text);
-        // Remove stop words from the normalized text.
-        var wordsWithoutStopWords = RemoveStopWords(normalizedText);
-        var uniqueWords = RemoveDuplicateWords(wordsWithoutStopWords);
-        return uniqueWords;
-    }
+   
 }
-
 
 public class ProductRecord
 {
@@ -276,10 +166,7 @@ public class ProductRecord
   
 }
 
-public class NomicResponse
-{
-    public float[] embedding { get; set; }
-}
+
 public class ElasticRecord
 {
     public int Id { get; set; }

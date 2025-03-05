@@ -1,0 +1,6 @@
+@Elasticsearch_SemanticSearch.API_HostAddress = http://localhost:5036
+
+GET {{Elasticsearch_SemanticSearch.API_HostAddress}}/search/
+Accept: application/json
+
+###
