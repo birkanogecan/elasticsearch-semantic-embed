@@ -57,24 +57,6 @@ public class Program
         Console.WriteLine("Arama yapmak için bir kelime girin:");
         string query = Console.ReadLine();
 
-        //örnek : pantul
-        //örnek : göynek
-        //örnek : küçük pantolon
-        //küçük insan
-        //kategori örnek : temıslene
-        //kategori örnek : giysi
-        //sıcak havalarda giyilecek giysi
-        //soğuk havalarda giyilecek giysi
-        //yumuşak kumaş
-        //para
-        //para taşımak için eşya
-        //bayan giyim
-        //adam
-        //adamlar için soğukta giyilecek giysi
-        //taşıt
-        //araba oturak örtüsü
-        //elektronik
-
         SearchInElasticsearch(query);
     }
 
@@ -156,16 +138,12 @@ public class Program
             Console.WriteLine("---------------------------------------------------------------");
         }
     }
-
-   
 }
 
 public class ProductRecord
 {
     public string title { get; set; }
-  
 }
-
 
 public class ElasticRecord
 {
