@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Elasticsearch_SemanticSearch
+namespace Elasticsearch_SemanticSearch.Data
 {
     public class ProductTY
     {

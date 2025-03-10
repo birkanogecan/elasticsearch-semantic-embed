@@ -7,7 +7,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Elasticsearch_SemanticSearch
+namespace Elasticsearch_SemanticSearch.Data
 {
     public class AppDbContext : DbContext
     {

@@ -1,4 +1,5 @@
 
+using Elasticsearch_SemanticSearch.ElasticClient;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Net;
@@ -33,7 +34,7 @@ namespace Elasticsearch_SemanticSearch.API
 
             app.MapGet("/search", ([FromQuery(Name = "p")] string prompt) =>
             {
-                var searchResponse =  SearchClient.SearchInElasticsearch(prompt);
+                var searchResponse =  ESClient.SearchInElasticsearch(prompt);
                 List<SearchResultResponse> searchResults = new ();
 
                 foreach (var item in searchResponse)

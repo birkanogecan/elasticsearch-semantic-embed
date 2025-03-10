@@ -1,4 +1,4 @@
-﻿namespace Elasticsearch_SemanticSearch.API
+﻿namespace Elasticsearch_SemanticSearch.ElasticClient
 {
     public class SearchResultResponse
     {
