@@ -14,6 +14,7 @@ namespace Elasticsearch_SemanticSearch.ElasticClient
         public string Category { get; set; }
         public string NormalizedText { get; set; }
         public float[] Vector { get; set; }
+        public double? Score { get; set; }
     }
 
 }

@@ -15,7 +15,7 @@ namespace Elasticsearch_SemanticSearch.ElasticClient
         private static readonly string ElasticsearchUser = "elastic";
         private static readonly string ElasticsearchPassword = "M1DW3gREyHfrvdzbvvVU";
         private static string ElasticsearchUrl = "https://localhost:9200";
-        private static string IndexName = "semantic_search_ty_product_new1"; //"semantic_search_ty_product_knn_norm_snow2_l2"
+        private static string IndexName = "semantic_search_ty_product_knn_norm_snow2_l2"; //"semantic_search_ty_product_knn_norm_snow2_l2" "semantic_search_ty_product_new1"
         private static readonly ElasticsearchClient _esClient = CreateElasticClient();
 
         public static ElasticsearchClient CreateElasticClient()
@@ -35,15 +35,30 @@ namespace Elasticsearch_SemanticSearch.ElasticClient
             var searchResponse = _esClient.SearchAsync<ElasticRecord>(s => s
                     .Index(IndexName)
                     .Size(10)
-                    .Query(q => q.Knn(k => k
+                    //.Query(q => q
+                    //    .Match(f => f
+                    //    .Query(query)
+                    //    .Field(t => t.Category)
+                    //    .Boost((float)0.9)))
+                    .Knn(k => k
                         .Field(f => f.Vector)
                         .QueryVector(queryVector)
-                        .k(10)
+                        .k(5)
                         .NumCandidates(10)
-                    ))
+                        //.Boost((float)0.1)
+                    )
                 ).Result;
+           
+            List<ElasticRecord> elasticRecords = searchResponse.Hits
+                .Select(hit =>
+                {
+                    var record = hit.Source;
+                    record.Score = hit.Score;
+                    return record;
+                })
+                .ToList();
 
-            return searchResponse.Hits.Select(hit => hit.Source).ToList();
+            return elasticRecords;
         }
 
         public static void SaveToElasticsearch(ElasticRecord elasticRecord)

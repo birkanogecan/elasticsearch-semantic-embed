@@ -43,6 +43,9 @@ namespace Elasticsearch_SemanticSearch.API
                     searchResultResponse.Id = item.Id;
                     searchResultResponse.Content = item.Content;
                     searchResultResponse.NormalizedContent = item.NormalizedText;
+                    searchResultResponse.Brand = item.Brand;
+                    searchResultResponse.Category = item.Category;
+                    searchResultResponse.Score = item.Score;
 
                     searchResults.Add(searchResultResponse);
                 }
